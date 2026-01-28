@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model activitylog {
+  id              Int        @id @default(autoincrement())
+  shop            String
+  ruleId          Int?
+  status          log_status @default(SUCCESS)
+  productsUpdated Int        @default(0)
+  reason          String?    @db.Text
+  createdAt       DateTime   @default(now())
+  rule            rule?      @relation(fields: [ruleId], references: [id], map: "ActivityLog_ruleId_fkey")
+
+  @@index([ruleId], map: "ActivityLog_ruleId_fkey")
+}
+
+model rule {
+  id                  Int                  @id @default(autoincrement())
+  shop                String
+  lastBulkOperationId String?
+  ruleName            String
+  matchType           rule_matchType       @default(AND)
+  taggingBehavior     rule_taggingBehavior @default(ADD)
+  autoRemoveTags      Boolean              @default(false)
+  conditions          String               @db.LongText
+  tags                String               @db.LongText
+  isActive            Boolean              @default(true)
+  lastRunAt           DateTime?
+  totalAppliedCount   Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  activitylog         activitylog[]
+  webhooklog          webhooklog[]
+
+  @@index([shop, ruleName], map: "Rule_shop_ruleName_idx")
+}
+
+model session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model setting {
+  id        Int      @id @default(autoincrement())
+  shop      String   @unique(map: "Setting_shop_key")
+  tagPrefix String?
+  appStatus Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+model webhooklog {
+  id          Int                    @id @default(autoincrement())
+  shop        String
+  ruleId      Int?
+  productId   String
+  triggerType webhooklog_triggerType @default(CREATE)
+  appliedTags String?                @db.LongText
+  status      webhooklog_status      @default(SUCCESS)
+  reason      String?                @db.LongText
+  createdAt   DateTime               @default(now())
+  rule        rule?                  @relation(fields: [ruleId], references: [id], map: "WebhookLog_ruleId_fkey")
+
+  @@index([productId], map: "WebhookLog_productId_idx")
+  @@index([ruleId], map: "WebhookLog_ruleId_fkey")
+  @@index([shop], map: "WebhookLog_shop_idx")
+}
+
+enum rule_matchType {
+  AND
+  OR
+}
+
+enum rule_taggingBehavior {
+  ADD
+  REPLACE
+}
+
+enum log_status {
+  SUCCESS
+  FAILED
+}
+
+enum webhooklog_triggerType {
+  CREATE
+  UPDATE
+}
+
+enum webhooklog_status {
+  SUCCESS
+  FAILED
+}
