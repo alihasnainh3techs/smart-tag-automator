@@ -81,3 +81,14 @@ export function formatDate(date) {
 
     return format(d, "hh:mm a dd MMM yyyy");
 }
+
+export function getSuccessRate(stats) {
+    const successful = stats.find(s => s.status === 'SUCCESS')?._count.status || 0;
+    const failed = stats.find(s => s.status === 'FAILED')?._count.status || 0;
+    const total = successful + failed;
+
+    if (total === 0) return 100;
+
+    const rate = (successful / total) * 100;
+    return parseFloat(rate.toFixed(1));
+}

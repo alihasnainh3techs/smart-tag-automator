@@ -37,6 +37,10 @@
     align-items: center;
 }
 
+.justify-content-center {
+    justify-content: center;
+}
+
 .flex-wrap {
     flex-wrap: wrap;
 }
