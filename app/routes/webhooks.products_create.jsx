@@ -26,13 +26,16 @@ export const action = async ({ request }) => {
 
     const { admin_graphql_api_id, } = payload;
 
-    const jobId = topic.toLowerCase() + admin_graphql_api_id.replace(":", "");
+    const productId = topic.toLowerCase() + admin_graphql_api_id.replace(":", "");
+    const itemId = admin_graphql_api_id.split("/").pop();
+
+    await redis.set(`just_created:${shop}:${itemId}`, "true", "EX", 30);
 
     await productCreatedTagUpdateQueue.add("product-created-auto-tag", {
         admin_graphql_api_id,
         shop,
     }, {
-        jobId,
+        jobId: productId,
         removeOnComplete: true,
         removeOnFail: { age: 24 * 3600 }
     });

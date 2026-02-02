@@ -11,9 +11,21 @@ export const action = async ({ request }) => {
     console.log("Topic:", topic);
     console.log("Payload:", payload);
 
-    const cachedSetting = await redis.get(`settings:${shop}`);
-    let settings;
+    const { admin_graphql_api_id, } = payload;
 
+    const itemId = admin_graphql_api_id.split("/").pop();
+
+    const settingsKey = `settings:${shop}`;
+    const lockKey = `webhook_lock:${shop}:${itemId}`;
+    const createdKey = `just_created:${shop}:${itemId}`;
+
+    const [cachedSetting, isLocked, isJustCreated] = await redis.mget([
+        settingsKey,
+        lockKey,
+        createdKey
+    ]);
+
+    let settings;
     if (!cachedSetting) {
         settings = await db.setting.findUnique({ where: { shop } });
         await redis.set(`settings:${shop}`, JSON.stringify(settings));
@@ -24,13 +36,7 @@ export const action = async ({ request }) => {
 
     if (!settings?.appStatus) return new Response();
 
-    const { admin_graphql_api_id, } = payload;
-
-    const itemId = admin_graphql_api_id.split("/").pop();
-    const lockKey = `webhook_lock:${shop}:${itemId}`;
-
-    const isLocked = await redis.get(lockKey);
-    if (isLocked) return new Response();
+    if (isLocked || isJustCreated) return new Response();
 
     const jobId = topic.toLowerCase() + admin_graphql_api_id.replace(":", "");
 
